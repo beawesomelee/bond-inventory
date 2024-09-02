@@ -9,105 +9,84 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0d0d0d;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+            background-color: #f5f5f5;
             margin: 0;
             padding: 20px;
-            color: #ffffff;
+            color: #333333;
         }
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background-color: #1a1a1a;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             padding: 30px;
         }
         h1, h2 {
             text-align: center;
-            color: #00ff8f;
+            color: #2c3e50;
             margin-bottom: 30px;
-            text-shadow: 0 0 10px rgba(0,255,143,0.5);
         }
         #plot {
             width: 100%;
             height: 600px;
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
         table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
             margin-top: 30px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
             overflow: hidden;
         }
         th, td {
             padding: 15px;
             text-align: left;
-            border-bottom: 1px solid #333333;
+            border-bottom: 1px solid #e0e0e0;
         }
         th {
-            background-color: #262626;
-            font-weight: bold;
-            color: #00ff8f;
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
         }
         tr:last-child td {
             border-bottom: none;
         }
         tr:hover {
-            background-color: #262626;
+            background-color: #f8f9fa;
             transition: background-color 0.3s ease;
         }
         .loading {
             text-align: center;
             font-size: 18px;
             margin-top: 20px;
-            color: #00ff8f;
-            animation: pulse 1.5s infinite;
+            color: #2c3e50;
         }
-        @keyframes pulse {
-            0% { opacity: 0.6; }
-            50% { opacity: 1; }
-            100% { opacity: 0.6; }
-        }
-        /* Add these new styles for additional ape.bond-like effects */
-        .container {
-            border: 1px solid #333333;
-        }
-        #plot {
-            background-color: #1a1a1a;
-            border: 1px solid #333333;
-        }
-        table {
-            background-color: #1a1a1a;
-            border: 1px solid #333333;
-        }
-        /* Style for buttons if you have any */
         .btn {
-            background-color: #00ff8f;
-            color: #0d0d0d;
+            background-color: #3498db;
+            color: white;
             border: none;
             padding: 10px 20px;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: background-color 0.3s ease;
         }
         .btn:hover {
-            background-color: #00cc72;
-            box-shadow: 0 0 10px rgba(0,255,143,0.5);
+            background-color: #2980b9;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Daily Bonds Inventory Dashboard</h1>
+        <h1>Bond Inventory Dashboard</h1>
         <div id="plot"></div>
-        <h2>Latest Daily Inventory</h2>
-        <div id="debug"></div>
+        <h2>Network Summary</h2>
+        <div id="table-container"></div>
     </div>
     <script>
         const chainNames = {
