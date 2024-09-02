@@ -84,8 +84,11 @@ def get_data():
     global data_cache
     try:
         if not data_cache:
-            logger.info("Data cache is empty, fetching new data")
-            fetch_data()  # Attempt to fetch data if cache is empty
+            logger.info("Data cache is empty, loading from file")
+            data_cache = load_data()
+        if not data_cache:
+            logger.info("No data in file, fetching new data")
+            fetch_data()
         if not data_cache:
             logger.warning("No data available after fetch attempt")
             return jsonify({"error": "No data available"}), 404
