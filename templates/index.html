@@ -214,11 +214,47 @@
         }
 
         function displayData(data) {
-            // Implement this function to actually display your data
-            console.log("Displaying data:", data);
             const plotElement = document.getElementById('plot');
-            plotElement.innerHTML = '<p>Data loaded successfully. Implement display logic here.</p>';
-            // TODO: Add your data visualization logic here
+            plotElement.innerHTML = ''; // Clear previous content
+
+            // Create a table to display the data
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <tr>
+                    <th>Network</th>
+                    <th>Total Remaining Value</th>
+                </tr>
+            `;
+
+            const chainNames = {
+                '1': 'Ethereum',
+                '56': 'Binance Smart Chain',
+                '137': 'Polygon',
+                '8453': 'Base',
+                '42161': 'Arbitrum One',
+                '59144': 'Linea'
+            };
+
+            for (const [chainId, values] of Object.entries(data)) {
+                if (chainId !== 'aggregate') {
+                    const [timestamp, value] = Object.entries(values)[0];
+                    const row = table.insertRow();
+                    row.innerHTML = `
+                        <td>${chainNames[chainId] || `Chain ${chainId}`}</td>
+                        <td>$${value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    `;
+                }
+            }
+
+            // Add aggregate row
+            const aggregateValue = Object.values(data.aggregate)[0];
+            const aggregateRow = table.insertRow();
+            aggregateRow.innerHTML = `
+                <td><strong>Total</strong></td>
+                <td><strong>$${aggregateValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+            `;
+
+            plotElement.appendChild(table);
         }
 
         // Call fetchAndUpdateData immediately when the script loads
