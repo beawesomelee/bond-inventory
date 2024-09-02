@@ -3,7 +3,7 @@ import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 import logging
-from flask_caching import Cache
+from flask_caching import Cache  # This is the correct import
 import os
 
 # Set up logging
