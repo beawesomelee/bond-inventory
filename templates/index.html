@@ -77,10 +77,56 @@
         .btn:hover {
             background-color: #2980b9;
         }
+        .total-inventory {
+            background-color: #f0f0f0;
+            border: 2px solid #3498db;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .total-inventory h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .total-inventory p {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 0;
+        }
+
+        .monkey {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <div id="total-inventory" class="total-inventory">
+            <div class="monkey">
+                <svg width="50" height="50" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="#8B4513" />
+                    <circle cx="35" cy="40" r="5" fill="white" />
+                    <circle cx="65" cy="40" r="5" fill="white" />
+                    <path d="M 40 60 Q 50 70 60 60" fill="none" stroke="white" stroke-width="3" />
+                </svg>
+            </div>
+            <h2>Total Current Inventory</h2>
+            <p id="total-value">Loading...</p>
+        </div>
         <h1>Daily Bonds Inventory Dashboard</h1>
         <div id="chart"></div>
         <h2>Latest Daily Inventory</h2>
@@ -102,12 +148,16 @@
         }
 
         function formatValue(value) {
-            return parseFloat(value).toLocaleString('en-US', {
-                style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
+            const absValue = Math.abs(value);
+            if (absValue >= 1e9) {
+                return (value / 1e9).toFixed(2) + 'B';
+            } else if (absValue >= 1e6) {
+                return (value / 1e6).toFixed(2) + 'M';
+            } else if (absValue >= 1e3) {
+                return (value / 1e3).toFixed(2) + 'K';
+            } else {
+                return value.toFixed(2);
+            }
         }
 
         function createDataTable(data) {
@@ -164,8 +214,16 @@
         }
 
         function displayData(data) {
+            updateTotalInventory(data);
             createChart(data);
             createTable(data);
+        }
+
+        function updateTotalInventory(data) {
+            const totalElement = document.getElementById('total-value');
+            const latestTimestamp = Object.keys(data['aggregate']).sort().pop();
+            const totalValue = data['aggregate'][latestTimestamp];
+            totalElement.textContent = formatValue(totalValue);
         }
 
         function createChart(data) {
