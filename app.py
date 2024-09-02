@@ -4,6 +4,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 import logging
 from flask_caching import Cache
+import os
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -72,5 +73,5 @@ def get_data():
         return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
-    fetch_data()  # Fetch data initially
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
