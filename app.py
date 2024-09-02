@@ -2,6 +2,7 @@ from flask import Flask, jsonify, render_template
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
+import logging
 
 app = Flask(__name__)
 data_cache = {}
@@ -46,9 +47,14 @@ def index():
 
 @app.route('/data')
 def get_data():
-    # Convert all keys to strings before jsonifying
-    string_keyed_data = {str(k): v for k, v in data_cache.items()}
-    return jsonify(string_keyed_data)
+    try:
+        # Your existing data fetching code
+        data = fetch_data_from_database()
+        app.logger.info(f"Data fetched successfully: {data}")
+        return jsonify(data)
+    except Exception as e:
+        app.logger.error(f"Error fetching data: {str(e)}")
+        return jsonify({"error": "Failed to fetch data"}), 500
 
 if __name__ == '__main__':
     fetch_data()  # Fetch data initially

@@ -10,7 +10,7 @@
     <style>
         body {
             font-family: 'Roboto', sans-serif;
-            background-color: #1a1a1a;
+            background-color: #121212;
             margin: 0;
             padding: 20px;
             color: #ffffff;
@@ -18,54 +18,61 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background-color: #2a2a2a;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 20px;
+            background-color: #1e1e1e;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            padding: 30px;
         }
         h1, h2 {
             text-align: center;
-            color: #ffffff;
-            margin-bottom: 20px;
+            color: #4ecdc4;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
         #plot {
             width: 100%;
             height: 600px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
-        #debug {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #333333;
-            border-radius: 4px;
-            font-size: 14px;
-            overflow-x: auto;
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #333333;
+        }
+        th {
+            background-color: #2a2a2a;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        tr:hover {
+            background-color: #252525;
+            transition: background-color 0.3s ease;
         }
         .loading {
             text-align: center;
             font-size: 18px;
             margin-top: 20px;
-            color: #ffffff;
+            color: #4ecdc4;
+            animation: pulse 1.5s infinite;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #444444;
-            padding: 12px;
-            text-align: left;
-        }
-        th {
-            background-color: #333333;
-            font-weight: bold;
-            color: #ffffff;
-        }
-        tr:nth-child(even) {
-            background-color: #2a2a2a;
-        }
-        tr:nth-child(odd) {
-            background-color: #333333;
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
         }
     </style>
 </head>
@@ -175,98 +182,17 @@
             try {
                 document.getElementById('plot').innerHTML = '<p class="loading">Loading data...</p>';
                 const response = await fetch('/data');
-                const data = await response.json();
-                console.log("Fetched data:", data);  // Debug log
-
-                // Update the debug table
-                const debugElement = document.getElementById('debug');
-                debugElement.innerHTML = '';
-                debugElement.appendChild(createDataTable(data));
-
-                const aggregatedData = aggregateDataByDay(data);
-
-                if (aggregatedData && Object.keys(aggregatedData).length > 0) {
-                    const traces = [];
-                    for (const [chainId, chainData] of Object.entries(aggregatedData)) {
-                        console.log(`Processing chain ${chainId}:`, chainData);
-                        const dates = Object.keys(chainData).sort();
-                        const values = dates.map(date => chainData[date]);
-
-                        // Skip chains with all zero values
-                        if (values.every(value => value === 0)) continue;
-
-                        traces.push({
-                            x: dates,
-                            y: values,
-                            type: 'scatter',
-                            mode: 'lines+markers',
-                            name: chainId === 'aggregate' ? 'All Chains' : getChainName(chainId),
-                            line: {
-                                width: 3,
-                            },
-                            marker: {
-                                size: 8,
-                            }
-                        });
-                    }
-
-                    const layout = {
-                        title: {
-                            text: 'Daily Bonds Inventory by Blockchain Network',
-                            font: {
-                                size: 24,
-                                color: '#ffffff'
-                            }
-                        },
-                        xaxis: { 
-                            title: 'Date',
-                            gridcolor: '#444444',
-                            color: '#ffffff'
-                        },
-                        yaxis: { 
-                            title: 'Inventory Value',
-                            type: 'log',
-                            gridcolor: '#444444',
-                            tickformat: '',
-                            tickmode: 'array',
-                            tickvals: [1e3, 1e4, 1e5, 1e6, 1e7],
-                            ticktext: ['1k', '10k', '100k', '1M', '10M'],
-                            color: '#ffffff'
-                        },
-                        legend: { 
-                            title: { text: 'Blockchain Networks', font: { color: '#ffffff' } },
-                            font: { color: '#ffffff' },
-                            bgcolor: '#333333',
-                            bordercolor: '#444444',
-                            borderwidth: 1
-                        },
-                        plot_bgcolor: '#2a2a2a',
-                        paper_bgcolor: '#2a2a2a',
-                        font: {
-                            family: 'Roboto, sans-serif',
-                            color: '#ffffff'
-                        },
-                        hovermode: 'closest'
-                    };
-
-                    const config = {
-                        responsive: true
-                    };
-
-                    const colors = ['#ff6b6b', '#4ecdc4', '#45aaf2', '#feca57', '#ff9ff3', '#a55eea', '#54a0ff', '#5f27cd'];
-                    traces.forEach((trace, index) => {
-                        trace.line.color = colors[index % colors.length];
-                        trace.marker.color = colors[index % colors.length];
-                    });
-
-                    Plotly.newPlot('plot', traces, layout, config);
-                } else {
-                    console.error("No data available");
-                    document.getElementById('plot').innerHTML = "<p class='loading'>No data available</p>";
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                // ... rest of your data processing code ...
             } catch (error) {
                 console.error("Error fetching or processing data:", error);
-                document.getElementById('plot').innerHTML = "<p class='loading'>Error fetching or processing data</p>";
+                document.getElementById('plot').innerHTML = `<p class='loading'>Error: ${error.message}</p>`;
             }
         }
 
