@@ -28,12 +28,10 @@
             color: #2c3e50;
             margin-bottom: 30px;
         }
-        #plot {
+        #chart {
             width: 100%;
             height: 600px;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 40px;
         }
         table {
             width: 100%;
@@ -186,18 +184,36 @@
 
             chainIds.forEach((chainId, index) => {
                 const chainData = data[chainId];
-                const x = Object.keys(chainData).map(date => moment(date).format('YYYY-MM-DD'));
-                const y = Object.values(chainData);
+                
+                // Aggregate data by day
+                const dailyData = {};
+                Object.entries(chainData).forEach(([timestamp, value]) => {
+                    const date = moment(timestamp).format('YYYY-MM-DD');
+                    if (!dailyData[date] || moment(timestamp).isAfter(moment(dailyData[date].timestamp))) {
+                        dailyData[date] = { timestamp, value };
+                    }
+                });
+
+                const x = Object.keys(dailyData).sort();
+                const y = x.map(date => dailyData[date].value);
 
                 traces.push({
                     x: x,
                     y: y,
                     type: 'scatter',
-                    mode: 'lines',
+                    mode: 'lines+markers',
                     name: getChainName(chainId),
                     line: {
                         color: colors[index % colors.length],
-                        width: 3
+                        width: 2
+                    },
+                    marker: {
+                        size: 6,
+                        color: colors[index % colors.length],
+                        line: {
+                            color: 'white',
+                            width: 1
+                        }
                     },
                     hoverinfo: 'x+y+name'
                 });
@@ -205,7 +221,7 @@
 
             const layout = {
                 title: {
-                    text: 'Daily Bonds Inventory Over Time',
+                    text: 'Daily Bonds Inventory',
                     font: {
                         size: 24,
                         color: '#2c3e50'
@@ -214,7 +230,8 @@
                 xaxis: {
                     title: 'Date',
                     gridcolor: '#e0e0e0',
-                    zeroline: false
+                    zeroline: false,
+                    tickformat: '%Y-%m-%d'
                 },
                 yaxis: {
                     title: 'Inventory Value (USD)',
