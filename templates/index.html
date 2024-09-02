@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Bonds Inventory Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #1a1a1a;
+            margin: 0;
+            padding: 20px;
+            color: #ffffff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+        #plot {
+            width: 100%;
+            height: 600px;
+        }
+        #debug {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #333333;
+            border-radius: 4px;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        .loading {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 20px;
+            color: #ffffff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #444444;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #333333;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        tr:nth-child(even) {
+            background-color: #2a2a2a;
+        }
+        tr:nth-child(odd) {
+            background-color: #333333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Daily Bonds Inventory Dashboard</h1>
+        <div id="plot"></div>
+        <h2>Latest Daily Inventory</h2>
+        <div id="debug"></div>
+    </div>
+    <script>
+        const chainNames = {
+            '1': 'Ethereum Mainnet',
+            '56': 'Binance Smart Chain',
+            '137': 'Polygon',
+            '8453': 'Base',
+            '42161': 'Arbitrum One',
+            '59144': 'Linea'
+        };
+
+        function getChainName(chainId) {
+            return chainNames[chainId] || `Chain ${chainId}`;
+        }
+
+        function formatValue(value) {
+            return parseFloat(value).toLocaleString('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function createDataTable(data) {
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+
+            // Create header
+            const headerRow = document.createElement('tr');
+            ['Blockchain Network', 'Daily Inventory', 'Date'].forEach(text => {
+                const th = document.createElement('th');
+                th.textContent = text;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // Create rows and sort by latest value
+            const rows = [];
+            for (const [chainId, chainData] of Object.entries(data)) {
+                if (chainId !== 'aggregate') {
+                    const latestTimestamp = Object.keys(chainData).sort().pop();
+                    const latestValue = parseFloat(chainData[latestTimestamp]);
+                    rows.push({
+                        chainId,
+                        latestValue,
+                        latestTimestamp
+                    });
+                }
+            }
+
+            // Sort rows by latest value in descending order
+            rows.sort((a, b) => b.latestValue - a.latestValue);
+
+            // Create table rows
+            for (const row of rows) {
+                const tr = document.createElement('tr');
+                const networkName = document.createElement('td');
+                const latestValue = document.createElement('td');
+                const timestamp = document.createElement('td');
+
+                networkName.textContent = getChainName(row.chainId);
+                latestValue.textContent = formatValue(row.latestValue);
+                timestamp.textContent = moment(row.latestTimestamp).format('YYYY-MM-DD');
+
+                tr.appendChild(networkName);
+                tr.appendChild(latestValue);
+                tr.appendChild(timestamp);
+                tbody.appendChild(tr);
+            }
+
+            table.appendChild(tbody);
+            return table;
+        }
+
+        function aggregateDataByDay(data) {
+            const aggregatedData = {};
+            for (const [chainId, chainData] of Object.entries(data)) {
+                aggregatedData[chainId] = {};
+                for (const [timestamp, value] of Object.entries(chainData)) {
+                    const date = moment(timestamp).format('YYYY-MM-DD');
+                    if (!aggregatedData[chainId][date]) {
+                        aggregatedData[chainId][date] = [];
+                    }
+                    aggregatedData[chainId][date].push(parseFloat(value));
+                }
+                // Calculate average for each day
+                for (const [date, values] of Object.entries(aggregatedData[chainId])) {
+                    aggregatedData[chainId][date] = values.reduce((a, b) => a + b, 0) / values.length;
+                }
+            }
+            return aggregatedData;
+        }
+
+        async function fetchAndUpdateData() {
+            try {
+                document.getElementById('plot').innerHTML = '<p class="loading">Loading data...</p>';
+                const response = await fetch('/data');
+                const data = await response.json();
+                console.log("Fetched data:", data);  // Debug log
+
+                // Update the debug table
+                const debugElement = document.getElementById('debug');
+                debugElement.innerHTML = '';
+                debugElement.appendChild(createDataTable(data));
+
+                const aggregatedData = aggregateDataByDay(data);
+
+                if (aggregatedData && Object.keys(aggregatedData).length > 0) {
+                    const traces = [];
+                    for (const [chainId, chainData] of Object.entries(aggregatedData)) {
+                        console.log(`Processing chain ${chainId}:`, chainData);
+                        const dates = Object.keys(chainData).sort();
+                        const values = dates.map(date => chainData[date]);
+
+                        // Skip chains with all zero values
+                        if (values.every(value => value === 0)) continue;
+
+                        traces.push({
+                            x: dates,
+                            y: values,
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            name: chainId === 'aggregate' ? 'All Chains' : getChainName(chainId),
+                            line: {
+                                width: 3,
+                            },
+                            marker: {
+                                size: 8,
+                            }
+                        });
+                    }
+
+                    const layout = {
+                        title: {
+                            text: 'Daily Bonds Inventory by Blockchain Network',
+                            font: {
+                                size: 24,
+                                color: '#ffffff'
+                            }
+                        },
+                        xaxis: { 
+                            title: 'Date',
+                            gridcolor: '#444444',
+                            color: '#ffffff'
+                        },
+                        yaxis: { 
+                            title: 'Inventory Value',
+                            type: 'log',
+                            gridcolor: '#444444',
+                            tickformat: '',
+                            tickmode: 'array',
+                            tickvals: [1e3, 1e4, 1e5, 1e6, 1e7],
+                            ticktext: ['1k', '10k', '100k', '1M', '10M'],
+                            color: '#ffffff'
+                        },
+                        legend: { 
+                            title: { text: 'Blockchain Networks', font: { color: '#ffffff' } },
+                            font: { color: '#ffffff' },
+                            bgcolor: '#333333',
+                            bordercolor: '#444444',
+                            borderwidth: 1
+                        },
+                        plot_bgcolor: '#2a2a2a',
+                        paper_bgcolor: '#2a2a2a',
+                        font: {
+                            family: 'Roboto, sans-serif',
+                            color: '#ffffff'
+                        },
+                        hovermode: 'closest'
+                    };
+
+                    const config = {
+                        responsive: true
+                    };
+
+                    const colors = ['#ff6b6b', '#4ecdc4', '#45aaf2', '#feca57', '#ff9ff3', '#a55eea', '#54a0ff', '#5f27cd'];
+                    traces.forEach((trace, index) => {
+                        trace.line.color = colors[index % colors.length];
+                        trace.marker.color = colors[index % colors.length];
+                    });
+
+                    Plotly.newPlot('plot', traces, layout, config);
+                } else {
+                    console.error("No data available");
+                    document.getElementById('plot').innerHTML = "<p class='loading'>No data available</p>";
+                }
+            } catch (error) {
+                console.error("Error fetching or processing data:", error);
+                document.getElementById('plot').innerHTML = "<p class='loading'>Error fetching or processing data</p>";
+            }
+        }
+
+        fetchAndUpdateData();
+        // Update data every 4 hours
+        setInterval(fetchAndUpdateData, 4 * 60 * 60 * 1000);
+    </script>
+</body>
+</html>
