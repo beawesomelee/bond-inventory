@@ -24,6 +24,9 @@ def fetch_data():
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         raw_data = response.json()
+        if not raw_data:
+            logger.warning("API returned empty data")
+            return
         logger.info(f"Received data: {raw_data[:100]}...")  # Log first 100 characters of raw data
         
         processed_data = {}
@@ -48,8 +51,11 @@ def fetch_data():
     except requests.RequestException as e:
         logger.error(f"Error fetching data: {e}")
         data_cache = {}  # Set to empty dict on error
+    except ValueError as e:
+        logger.error(f"Error parsing JSON data: {e}")
+        data_cache = {}  # Set to empty dict on error
     except Exception as e:
-        logger.error(f"Error processing data: {e}")
+        logger.error(f"Unexpected error processing data: {e}")
         data_cache = {}  # Set to empty dict on error
 
 def start_scheduler():
@@ -88,6 +94,10 @@ def get_data():
     except Exception as e:
         logger.error(f"Error in get_data route: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/health')
+def health_check():
+    return jsonify({"status": "healthy"}), 200
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

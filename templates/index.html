@@ -164,25 +164,6 @@
             return table;
         }
 
-        function aggregateDataByDay(data) {
-            const aggregatedData = {};
-            for (const [chainId, chainData] of Object.entries(data)) {
-                aggregatedData[chainId] = {};
-                for (const [timestamp, value] of Object.entries(chainData)) {
-                    const date = moment(timestamp).format('YYYY-MM-DD');
-                    if (!aggregatedData[chainId][date]) {
-                        aggregatedData[chainId][date] = [];
-                    }
-                    aggregatedData[chainId][date].push(parseFloat(value));
-                }
-                // Calculate average for each day
-                for (const [date, values] of Object.entries(aggregatedData[chainId])) {
-                    aggregatedData[chainId][date] = values.reduce((a, b) => a + b, 0) / values.length;
-                }
-            }
-            return aggregatedData;
-        }
-
         async function fetchAndUpdateData() {
             const plotElement = document.getElementById('plot');
             plotElement.innerHTML = '<p class="loading">Loading data... This may take a few moments.</p>';
@@ -217,43 +198,7 @@
             const plotElement = document.getElementById('plot');
             plotElement.innerHTML = ''; // Clear previous content
 
-            // Create a table to display the data
-            const table = document.createElement('table');
-            table.innerHTML = `
-                <tr>
-                    <th>Network</th>
-                    <th>Total Remaining Value</th>
-                </tr>
-            `;
-
-            const chainNames = {
-                '1': 'Ethereum',
-                '56': 'Binance Smart Chain',
-                '137': 'Polygon',
-                '8453': 'Base',
-                '42161': 'Arbitrum One',
-                '59144': 'Linea'
-            };
-
-            for (const [chainId, values] of Object.entries(data)) {
-                if (chainId !== 'aggregate') {
-                    const [timestamp, value] = Object.entries(values)[0];
-                    const row = table.insertRow();
-                    row.innerHTML = `
-                        <td>${chainNames[chainId] || `Chain ${chainId}`}</td>
-                        <td>$${value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    `;
-                }
-            }
-
-            // Add aggregate row
-            const aggregateValue = Object.values(data.aggregate)[0];
-            const aggregateRow = table.insertRow();
-            aggregateRow.innerHTML = `
-                <td><strong>Total</strong></td>
-                <td><strong>$${aggregateValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
-            `;
-
+            const table = createDataTable(data);
             plotElement.appendChild(table);
         }
 
