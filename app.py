@@ -4,14 +4,19 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 import logging
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
 data_cache = {}
 
 def fetch_data():
     global data_cache
     url = "https://bonds-dashboard-api-deaf0d7d55b7.herokuapp.com/collector/inventory"
-    response = requests.get(url)
-    if response.status_code == 200:
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()  # This will raise an exception for HTTP errors
         raw_data = response.json()
         processed_data = {}
         timestamp = datetime.now().isoformat() 
@@ -33,8 +38,12 @@ def fetch_data():
         
         data_cache = processed_data
         print("Data fetched and processed:", data_cache)  # Debug print
-    else:
-        print(f"Failed to fetch data. Status code: {response.status_code}")
+    except requests.RequestException as e:
+        print(f"Error fetching data: {e}")
+        # You might want to set data_cache to a default value here
+    except Exception as e:
+        print(f"Error processing data: {e}")
+        # You might want to set data_cache to a default value here
 
 # Schedule data fetch every 4 hours
 scheduler = BackgroundScheduler()
@@ -47,14 +56,16 @@ def index():
 
 @app.route('/data')
 def get_data():
+    global data_cache
     try:
-        # Your existing data fetching code
-        data = fetch_data_from_database()
-        app.logger.info(f"Data fetched successfully: {data}")
-        return jsonify(data)
+        if not data_cache:
+            fetch_data()  # Attempt to fetch data if cache is empty
+        if not data_cache:
+            return jsonify({"error": "No data available"}), 404
+        return jsonify(data_cache)
     except Exception as e:
-        app.logger.error(f"Error fetching data: {str(e)}")
-        return jsonify({"error": "Failed to fetch data"}), 500
+        app.logger.error(f"Error in get_data route: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
     fetch_data()  # Fetch data initially

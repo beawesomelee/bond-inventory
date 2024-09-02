@@ -189,10 +189,13 @@
                 if (data.error) {
                     throw new Error(data.error);
                 }
-                // ... rest of your data processing code ...
+                // Process and display data here
             } catch (error) {
                 console.error("Error fetching or processing data:", error);
-                document.getElementById('plot').innerHTML = `<p class='loading'>Error: ${error.message}</p>`;
+                document.getElementById('plot').innerHTML = `
+                    <p class='loading'>Error: ${error.message}</p>
+                    <p>Please try refreshing the page. If the problem persists, contact support.</p>
+                `;
             }
         }
 
