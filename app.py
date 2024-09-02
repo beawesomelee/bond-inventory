@@ -20,9 +20,12 @@ def fetch_data():
     global data_cache
     url = "https://bonds-dashboard-api-deaf0d7d55b7.herokuapp.com/collector/inventory"
     try:
+        logger.info("Attempting to fetch data from API")
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         raw_data = response.json()
+        logger.info(f"Received data: {raw_data[:100]}...")  # Log first 100 characters of raw data
+        
         processed_data = {}
         timestamp = datetime.now().isoformat() 
         for chain in raw_data:
@@ -41,7 +44,7 @@ def fetch_data():
         }
         
         data_cache = processed_data
-        logger.info("Data fetched and processed successfully")
+        logger.info(f"Processed data: {processed_data}")
     except requests.RequestException as e:
         logger.error(f"Error fetching data: {e}")
         data_cache = {}  # Set to empty dict on error
@@ -75,9 +78,12 @@ def get_data():
     global data_cache
     try:
         if not data_cache:
+            logger.info("Data cache is empty, fetching new data")
             fetch_data()  # Attempt to fetch data if cache is empty
         if not data_cache:
+            logger.warning("No data available after fetch attempt")
             return jsonify({"error": "No data available"}), 404
+        logger.info(f"Returning data: {data_cache}")
         return jsonify(data_cache)
     except Exception as e:
         logger.error(f"Error in get_data route: {str(e)}")

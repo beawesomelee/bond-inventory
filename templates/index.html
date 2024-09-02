@@ -205,30 +205,26 @@
         }
 
         async function fetchAndUpdateData() {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);  // 30 second timeout
+            const plotElement = document.getElementById('plot');
+            plotElement.innerHTML = '<p class="loading">Loading data... This may take a few moments.</p>';
             try {
-                const response = await fetch('/data', { signal: controller.signal });
-                clearTimeout(timeoutId);
+                const response = await fetch('/data');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
+                console.log("Received data:", data);  // Log the received data
                 if (data.error) {
                     throw new Error(data.error);
                 }
                 // Process and display data here
+                // ...
             } catch (error) {
-                if (error.name === 'AbortError') {
-                    console.error("Request timed out");
-                    document.getElementById('plot').innerHTML = '<p class="loading">Request timed out. Please try again later.</p>';
-                } else {
-                    console.error("Error fetching or processing data:", error);
-                    document.getElementById('plot').innerHTML = `
-                        <p class='loading'>Error: ${error.message}</p>
-                        <p>If this persists, the server may be experiencing high load. Please try again in a few minutes.</p>
-                    `;
-                }
+                console.error("Error fetching or processing data:", error);
+                plotElement.innerHTML = `
+                    <p class='loading'>Error: ${error.message}</p>
+                    <p>If this persists, the server may be experiencing high load. Please try again in a few minutes.</p>
+                `;
             }
         }
 
