@@ -84,8 +84,9 @@
 <body>
     <div class="container">
         <h1>Daily Bonds Inventory Dashboard</h1>
-        <div id="plot"></div>
+        <div id="chart"></div>
         <h2>Latest Daily Inventory</h2>
+        <div id="table"></div>
         <div id="debug"></div>
     </div>
     <script>
@@ -164,9 +165,61 @@
             return table;
         }
 
+        function displayData(data) {
+            createChart(data);
+            createTable(data);
+        }
+
+        function createChart(data) {
+            console.log("Creating chart with data:", data);
+            const chartElement = document.getElementById('chart');
+            chartElement.innerHTML = ''; // Clear previous content
+
+            const traces = [];
+            const chainIds = Object.keys(data).filter(key => key !== 'aggregate');
+
+            chainIds.forEach(chainId => {
+                const chainData = data[chainId];
+                const x = Object.keys(chainData).map(date => moment(date).format('YYYY-MM-DD'));
+                const y = Object.values(chainData);
+
+                traces.push({
+                    x: x,
+                    y: y,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: getChainName(chainId)
+                });
+            });
+
+            const layout = {
+                title: 'Daily Bonds Inventory Over Time',
+                xaxis: {
+                    title: 'Date'
+                },
+                yaxis: {
+                    title: 'Inventory Value (USD)'
+                },
+                height: 600,
+                margin: { l: 50, r: 50, b: 50, t: 50, pad: 4 }
+            };
+
+            Plotly.newPlot(chartElement, traces, layout);
+        }
+
+        function createTable(data) {
+            const tableElement = document.getElementById('table');
+            tableElement.innerHTML = ''; // Clear previous content
+
+            const table = createDataTable(data);
+            tableElement.appendChild(table);
+        }
+
         async function fetchAndUpdateData() {
-            const plotElement = document.getElementById('plot');
-            plotElement.innerHTML = '<p class="loading">Loading data... This may take a few moments.</p>';
+            const chartElement = document.getElementById('chart');
+            const tableElement = document.getElementById('table');
+            chartElement.innerHTML = '<p class="loading">Loading data... This may take a few moments.</p>';
+            tableElement.innerHTML = '';
             try {
                 console.log("Fetching data...");
                 const response = await fetch('/data', { timeout: 30000 }); // 30 seconds timeout
@@ -180,26 +233,18 @@
                     throw new Error(data.error);
                 }
                 if (Object.keys(data).length === 0) {
-                    plotElement.innerHTML = '<p class="loading">No data available. Please try again later.</p>';
+                    chartElement.innerHTML = '<p class="loading">No data available. Please try again later.</p>';
                     return;
                 }
                 // Process and display data here
                 displayData(data);
             } catch (error) {
                 console.error("Error fetching or processing data:", error);
-                plotElement.innerHTML = `
+                chartElement.innerHTML = `
                     <p class='loading'>Error: ${error.message}</p>
                     <p>If this persists, the server may be experiencing high load. Please try again in a few minutes.</p>
                 `;
             }
-        }
-
-        function displayData(data) {
-            const plotElement = document.getElementById('plot');
-            plotElement.innerHTML = ''; // Clear previous content
-
-            const table = createDataTable(data);
-            plotElement.appendChild(table);
         }
 
         // Call fetchAndUpdateData immediately when the script loads
