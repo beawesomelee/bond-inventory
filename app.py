@@ -3,6 +3,7 @@ import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 import logging
+from flask_caching import Cache
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -10,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 data_cache = {}
+
+cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 
 def fetch_data():
     global data_cache
@@ -55,6 +58,7 @@ def index():
     return render_template('index.html')
 
 @app.route('/data')
+@cache.cached(timeout=3600)  # Cache for 1 hour
 def get_data():
     global data_cache
     try:
