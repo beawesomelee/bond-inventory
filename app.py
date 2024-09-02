@@ -13,7 +13,7 @@ def fetch_data():
     if response.status_code == 200:
         raw_data = response.json()
         processed_data = {}
-        timestamp = datetime.now().isoformat()
+        timestamp = datetime.now().isoformat() 
         for chain in raw_data:
             chainId = str(chain['chainId'])  # Convert chainId to string
             totalRemainingValue = chain.get('totalRemainingValue')
