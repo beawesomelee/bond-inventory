@@ -14,6 +14,7 @@ app = Flask(__name__)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 data_cache = {}
 scheduler = None
+initialized = False
 
 def fetch_data():
     global data_cache
@@ -56,10 +57,13 @@ def start_scheduler():
         scheduler.start()
         logger.info("Scheduler started")
 
-@app.before_first_request
+@app.before_request
 def initialize():
-    fetch_data()  # Fetch data immediately
-    start_scheduler()  # Start the scheduler
+    global initialized
+    if not initialized:
+        fetch_data()  # Fetch data immediately
+        start_scheduler()  # Start the scheduler
+        initialized = True
 
 @app.route('/')
 def index():
