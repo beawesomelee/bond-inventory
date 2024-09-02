@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, render_template
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 from flask_caching import Cache
 import os
@@ -11,21 +11,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-data_cache = {}
-
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
+data_cache = {}
+scheduler = None
 
 def fetch_data():
     global data_cache
     url = "https://bonds-dashboard-api-deaf0d7d55b7.herokuapp.com/collector/inventory"
     try:
         response = requests.get(url, timeout=10)
-        response.raise_for_status()  # This will raise an exception for HTTP errors
+        response.raise_for_status()
         raw_data = response.json()
         processed_data = {}
         timestamp = datetime.now().isoformat() 
         for chain in raw_data:
-            chainId = str(chain['chainId'])  # Convert chainId to string
+            chainId = str(chain['chainId'])
             totalRemainingValue = chain.get('totalRemainingValue')
             if totalRemainingValue is not None:
                 totalRemainingValue = float(totalRemainingValue)
@@ -35,24 +35,31 @@ def fetch_data():
                 processed_data[chainId] = {}
             processed_data[chainId][timestamp] = totalRemainingValue
         
-        # Add an aggregate of all chains
         processed_data['aggregate'] = {
             timestamp: sum(float(chain.get('totalRemainingValue', 0)) for chain in raw_data if chain.get('totalRemainingValue') is not None)
         }
         
         data_cache = processed_data
-        print("Data fetched and processed:", data_cache)  # Debug print
+        logger.info("Data fetched and processed successfully")
     except requests.RequestException as e:
-        print(f"Error fetching data: {e}")
-        # You might want to set data_cache to a default value here
+        logger.error(f"Error fetching data: {e}")
+        data_cache = {}  # Set to empty dict on error
     except Exception as e:
-        print(f"Error processing data: {e}")
-        # You might want to set data_cache to a default value here
+        logger.error(f"Error processing data: {e}")
+        data_cache = {}  # Set to empty dict on error
 
-# Schedule data fetch every 4 hours
-scheduler = BackgroundScheduler()
-scheduler.add_job(fetch_data, 'interval', hours=4)
-scheduler.start()
+def start_scheduler():
+    global scheduler
+    if scheduler is None:
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(fetch_data, 'interval', hours=4)
+        scheduler.start()
+        logger.info("Scheduler started")
+
+@app.before_first_request
+def initialize():
+    fetch_data()  # Fetch data immediately
+    start_scheduler()  # Start the scheduler
 
 @app.route('/')
 def index():
@@ -69,7 +76,7 @@ def get_data():
             return jsonify({"error": "No data available"}), 404
         return jsonify(data_cache)
     except Exception as e:
-        app.logger.error(f"Error in get_data route: {str(e)}")
+        logger.error(f"Error in get_data route: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':

@@ -6,6 +6,7 @@ click==8.1.7
 distro==1.9.0
 Flask==3.0.3
 Flask-SQLAlchemy==3.1.1
+Flask-Caching==1.10.1
 gunicorn==23.0.0
 h11==0.14.0
 httpcore==1.0.5
@@ -26,4 +27,3 @@ typing_extensions==4.12.2
 Werkzeug==3.0.4
 requests==2.26.0
 APScheduler==3.7.0
-gunicorn==23.0.0
