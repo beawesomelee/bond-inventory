@@ -185,7 +185,7 @@
             chainIds.forEach((chainId, index) => {
                 const chainData = data[chainId];
                 
-                // Aggregate data by day
+                // Aggregate data by day, keeping only the latest value for each day
                 const dailyData = {};
                 Object.entries(chainData).forEach(([timestamp, value]) => {
                     const date = moment(timestamp).format('YYYY-MM-DD');
