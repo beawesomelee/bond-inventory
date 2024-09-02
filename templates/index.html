@@ -178,7 +178,13 @@
             const traces = [];
             const chainIds = Object.keys(data).filter(key => key !== 'aggregate');
 
-            chainIds.forEach(chainId => {
+            const colors = [
+                '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', 
+                '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', 
+                '#bcbd22', '#17becf'
+            ];
+
+            chainIds.forEach((chainId, index) => {
                 const chainData = data[chainId];
                 const x = Object.keys(chainData).map(date => moment(date).format('YYYY-MM-DD'));
                 const y = Object.values(chainData);
@@ -187,24 +193,55 @@
                     x: x,
                     y: y,
                     type: 'scatter',
-                    mode: 'lines+markers',
-                    name: getChainName(chainId)
+                    mode: 'lines',
+                    name: getChainName(chainId),
+                    line: {
+                        color: colors[index % colors.length],
+                        width: 3
+                    },
+                    hoverinfo: 'x+y+name'
                 });
             });
 
             const layout = {
-                title: 'Daily Bonds Inventory Over Time',
+                title: {
+                    text: 'Daily Bonds Inventory Over Time',
+                    font: {
+                        size: 24,
+                        color: '#2c3e50'
+                    }
+                },
                 xaxis: {
-                    title: 'Date'
+                    title: 'Date',
+                    gridcolor: '#e0e0e0',
+                    zeroline: false
                 },
                 yaxis: {
-                    title: 'Inventory Value (USD)'
+                    title: 'Inventory Value (USD)',
+                    gridcolor: '#e0e0e0',
+                    zeroline: false,
+                    tickformat: '$.2s'
                 },
                 height: 600,
-                margin: { l: 50, r: 50, b: 50, t: 50, pad: 4 }
+                margin: { l: 60, r: 30, b: 50, t: 80, pad: 4 },
+                paper_bgcolor: 'white',
+                plot_bgcolor: 'white',
+                hovermode: 'closest',
+                legend: {
+                    orientation: 'h',
+                    y: -0.15
+                },
+                font: {
+                    family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                }
             };
 
-            Plotly.newPlot(chartElement, traces, layout);
+            const config = {
+                responsive: true,
+                displayModeBar: false
+            };
+
+            Plotly.newPlot(chartElement, traces, layout, config);
         }
 
         function createTable(data) {
