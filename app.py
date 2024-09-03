@@ -21,7 +21,8 @@ scheduler = None
 initialized = False
 
 # Database connection
-DATABASE_URL = os.environ['DATABASE_URL']
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgres://u5sb0048vfu1g0:p747121bf78784730076f00603de6be1e96200eafa77ba66e872c511fe134835d@c5hilnj7pn10vb.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com:5432/dajdlrk8ce1154')
+
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
