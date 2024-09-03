@@ -130,7 +130,6 @@ def initialize():
     global initialized
     if not initialized:
         fetch_data()  # Fetch data immediately
-        start_scheduler()  # Start the scheduler
         initialized = True
 
 @app.route('/')
