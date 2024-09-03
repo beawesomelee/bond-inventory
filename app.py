@@ -6,7 +6,9 @@ import logging
 from flask_caching import Cache  # This is the correct import
 import os
 import json
-import subprocess
+import psycopg2
+from psycopg2.extras import Json
+from urllib.parse import urlparse
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -18,13 +20,47 @@ data_cache = {}
 scheduler = None
 initialized = False
 
-def load_data():
-    data_str = os.environ.get('DATA_CACHE', '{}')
-    return json.loads(data_str)
+# Database connection
+DATABASE_URL = os.environ['DATABASE_URL']
+url = urlparse(DATABASE_URL)
+db_config = {
+    'dbname': url.path[1:],
+    'user': url.username,
+    'password': url.password,
+    'host': url.hostname,
+    'port': url.port
+}
+
+def get_db_connection():
+    return psycopg2.connect(**db_config)
+
+def init_db():
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS inventory_data (
+                    id SERIAL PRIMARY KEY,
+                    timestamp TIMESTAMP,
+                    data JSONB
+                )
+            """)
+        conn.commit()
 
 def save_data(data):
-    json_data = json.dumps(data)
-    os.environ['DATA_CACHE'] = json_data
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO inventory_data (timestamp, data) VALUES (NOW(), %s)",
+                (Json(data),)
+            )
+        conn.commit()
+
+def load_data():
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT data FROM inventory_data ORDER BY timestamp DESC LIMIT 1")
+            result = cur.fetchone()
+            return result[0] if result else {}
 
 def fetch_data():
     global data_cache
