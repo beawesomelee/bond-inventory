@@ -22,6 +22,9 @@ initialized = False
 
 # Database connection
 DATABASE_URL = os.environ['DATABASE_URL']
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 url = urlparse(DATABASE_URL)
 db_config = {
     'dbname': url.path[1:],
