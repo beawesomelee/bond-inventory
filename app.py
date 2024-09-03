@@ -59,10 +59,14 @@ def fetch_data():
                 totalRemainingValue = 0.0
             if chainId not in data_cache:
                 data_cache[chainId] = {}
+            # Add new data point without overwriting existing ones
             data_cache[chainId][timestamp] = totalRemainingValue
         
-        data_cache['aggregate'] = data_cache.get('aggregate', {})
-        data_cache['aggregate'][timestamp] = sum(float(chain.get('totalRemainingValue', 0)) for chain in raw_data if chain.get('totalRemainingValue') is not None)
+        # Calculate and store aggregate
+        aggregate_value = sum(float(chain.get('totalRemainingValue', 0)) for chain in raw_data if chain.get('totalRemainingValue') is not None)
+        if 'aggregate' not in data_cache:
+            data_cache['aggregate'] = {}
+        data_cache['aggregate'][timestamp] = aggregate_value
         
         # Save updated data
         save_data(data_cache)

@@ -210,17 +210,10 @@
             chainIds.forEach((chainId, index) => {
                 const chainData = data[chainId];
                 
-                // Aggregate data by day, keeping only the latest value for each day
-                const dailyData = {};
-                Object.entries(chainData).forEach(([timestamp, value]) => {
-                    const date = moment(timestamp).format('YYYY-MM-DD');
-                    if (!dailyData[date] || moment(timestamp).isAfter(moment(dailyData[date].timestamp))) {
-                        dailyData[date] = { timestamp, value };
-                    }
-                });
-
-                const x = Object.keys(dailyData).sort();
-                const y = x.map(date => dailyData[date].value);
+                // Sort timestamps and get corresponding values
+                const sortedEntries = Object.entries(chainData).sort(([a], [b]) => a.localeCompare(b));
+                const x = sortedEntries.map(([timestamp, _]) => moment(timestamp).format('YYYY-MM-DD'));
+                const y = sortedEntries.map(([_, value]) => value);
 
                 traces.push({
                     x: x,
