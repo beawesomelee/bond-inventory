@@ -18,20 +18,11 @@ scheduler = None
 initialized = False
 
 def load_data():
-    try:
-        with open('data_cache.json', 'r') as f:
-            data = json.load(f)
-        # Remove data older than 30 days
-        cutoff = (datetime.now() - timedelta(days=30)).isoformat()
-        for chain_id in data:
-            data[chain_id] = {k: v for k, v in data[chain_id].items() if k >= cutoff}
-        return data
-    except FileNotFoundError:
-        return {}
+    data_str = os.environ.get('DATA_CACHE', '{}')
+    return json.loads(data_str)
 
 def save_data(data):
-    with open('data_cache.json', 'w') as f:
-        json.dump(data, f)
+    os.environ['DATA_CACHE'] = json.dumps(data)
 
 def fetch_data():
     global data_cache
