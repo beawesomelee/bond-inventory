@@ -60,11 +60,16 @@ def save_data(data):
         conn.commit()
 
 def load_data():
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT data FROM inventory_data ORDER BY timestamp DESC LIMIT 1")
-            result = cur.fetchone()
-            return result[0] if result else {}
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT data FROM inventory_data ORDER BY timestamp DESC LIMIT 1")
+                result = cur.fetchone()
+                return result[0] if result else {}
+    except psycopg2.errors.UndefinedTable:
+        logger.info("Table does not exist. Initializing database.")
+        init_db()
+        return {}
 
 def fetch_data():
     global data_cache
