@@ -6,6 +6,7 @@ import logging
 from flask_caching import Cache  # This is the correct import
 import os
 import json
+import subprocess
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -22,7 +23,8 @@ def load_data():
     return json.loads(data_str)
 
 def save_data(data):
-    os.environ['DATA_CACHE'] = json.dumps(data)
+    json_data = json.dumps(data)
+    subprocess.run(['heroku', 'config:set', f'DATA_CACHE={json_data}', '--app', 'bond-inventory-dashboard'], check=True)
 
 def fetch_data():
     global data_cache
