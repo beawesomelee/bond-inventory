@@ -24,7 +24,7 @@ def load_data():
 
 def save_data(data):
     json_data = json.dumps(data)
-    subprocess.run(['heroku', 'config:set', f'DATA_CACHE={json_data}', '--app', 'bond-inventory-dashboard'], check=True)
+    os.environ['DATA_CACHE'] = json_data
 
 def fetch_data():
     global data_cache
