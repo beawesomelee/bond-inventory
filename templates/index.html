@@ -5,22 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bond Inventory Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-        #chart-container { display: flex; justify-content: space-between; }
-        #lineChart { width: 70%; }
-        #pieChart { width: 25%; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-    </style>
 </head>
 <body>
     <h1>Bond Inventory Dashboard</h1>
-    <div id="chart-container">
-        <canvas id="lineChart"></canvas>
-        <canvas id="pieChart"></canvas>
-    </div>
     <h2>Latest Inventory</h2>
     <table id="inventoryTable">
         <thead>
@@ -30,98 +17,51 @@
                 <th>Date</th>
             </tr>
         </thead>
-        <tbody></tbody>
+        <tbody>
+            <!-- Data will be inserted here by JavaScript -->
+        </tbody>
     </table>
+
+    <canvas id="pieChart"></canvas>
+
     <script>
-        let lineChart, pieChart;
-
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-        }
-
-        function updateDashboard() {
+        document.addEventListener('DOMContentLoaded', function() {
             fetch('/data')
                 .then(response => response.json())
                 .then(data => {
-                    updateLineChart(data.historical);
-                    updatePieChart(data.pie_data);
-                    updateInventoryTable(data.latest);
+                    // Populate the table
+                    const tableBody = document.querySelector('#inventoryTable tbody');
+                    for (const [chain, info] of Object.entries(data.latest)) {
+                        const row = tableBody.insertRow();
+                        row.insertCell(0).textContent = chain;
+                        row.insertCell(1).textContent = info.value.toFixed(2);
+                        row.insertCell(2).textContent = new Date(info.date).toLocaleDateString();
+                    }
+
+                    // Create the pie chart
+                    const ctx = document.getElementById('pieChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: Object.keys(data.pie_data),
+                            datasets: [{
+                                data: Object.values(data.pie_data),
+                                backgroundColor: [
+                                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            title: {
+                                display: true,
+                                text: 'Chain Distribution'
+                            }
+                        }
+                    });
                 })
                 .catch(error => console.error('Error:', error));
-        }
-
-        function updateLineChart(data) {
-            const datasets = Object.entries(data).map(([chain, values]) => ({
-                label: chain,
-                data: Object.entries(values).map(([date, value]) => ({ x: date, y: value })),
-                fill: false
-            }));
-
-            if (lineChart) {
-                lineChart.data.datasets = datasets;
-                lineChart.update();
-            } else {
-                const ctx = document.getElementById('lineChart').getContext('2d');
-                lineChart = new Chart(ctx, {
-                    type: 'line',
-                    data: { datasets },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            x: { type: 'time', time: { unit: 'day' } },
-                            y: { beginAtZero: true }
-                        }
-                    }
-                });
-            }
-        }
-
-        function updatePieChart(data) {
-            const labels = Object.keys(data);
-            const values = Object.values(data);
-
-            if (pieChart) {
-                pieChart.data.labels = labels;
-                pieChart.data.datasets[0].data = values;
-                pieChart.update();
-            } else {
-                const ctx = document.getElementById('pieChart').getContext('2d');
-                pieChart = new Chart(ctx, {
-                    type: 'pie',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: values,
-                            backgroundColor: [
-                                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
-                            ]
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        title: {
-                            display: true,
-                            text: 'Distribution by Chain'
-                        }
-                    }
-                });
-            }
-        }
-
-        function updateInventoryTable(data) {
-            const tableBody = document.querySelector('#inventoryTable tbody');
-            tableBody.innerHTML = '';
-            Object.entries(data).forEach(([chain, info]) => {
-                const row = tableBody.insertRow();
-                row.insertCell(0).textContent = chain;
-                row.insertCell(1).textContent = info.value.toFixed(2);
-                row.insertCell(2).textContent = formatDate(info.date);
-            });
-        }
-
-        updateDashboard();
-        setInterval(updateDashboard, 300000); // Update every 5 minutes
+        });
     </script>
 </body>
 </html>

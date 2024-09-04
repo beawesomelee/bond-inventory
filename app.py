@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='', static_folder='static')
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 data_cache = {}
 scheduler = None
