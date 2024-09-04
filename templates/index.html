@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daily Bonds Inventory Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -65,13 +67,25 @@
         }
 
         function createLineChart(historicalData) {
+            console.log("Historical data:", historicalData);  // Debug log
+
             const ctx = document.getElementById('dailyInventoryChart').getContext('2d');
-            const datasets = Object.entries(historicalData).map(([chain, data]) => ({
-                label: getChainName(chain),
-                data: Object.entries(data).map(([date, value]) => ({ x: new Date(date), y: value })),
-                borderColor: getChainColor(chain),
-                fill: false
-            })).filter(dataset => dataset.label !== 'Aggregate');
+            const datasets = Object.entries(historicalData)
+                .filter(([chain, _]) => chain !== 'aggregate')
+                .map(([chain, data]) => {
+                    console.log(`Processing chain ${chain}:`, data);  // Debug log
+                    return {
+                        label: getChainName(chain),
+                        data: Object.entries(data).map(([date, value]) => ({
+                            x: new Date(date),
+                            y: value
+                        })),
+                        borderColor: getChainColor(chain),
+                        fill: false
+                    };
+                });
+
+            console.log("Processed datasets:", datasets);  // Debug log
 
             new Chart(ctx, {
                 type: 'line',
@@ -85,7 +99,7 @@
                             time: {
                                 unit: 'day',
                                 displayFormats: {
-                                    day: 'MMM D'
+                                    day: 'MMM d'
                                 }
                             },
                             title: {
