@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -87,7 +88,16 @@
 
             console.log("Processed datasets:", datasets);  // Debug log
 
-            new Chart(ctx, {
+            // Calculate the date range
+            const allDates = datasets.flatMap(dataset => dataset.data.map(point => point.x));
+            const minDate = new Date(Math.min(...allDates));
+            const maxDate = new Date(Math.max(...allDates));
+            
+            // Set the default view to the last 30 days
+            const defaultEnd = maxDate;
+            const defaultStart = new Date(maxDate.getTime() - (30 * 24 * 60 * 60 * 1000));
+
+            const chart = new Chart(ctx, {
                 type: 'line',
                 data: { datasets },
                 options: {
@@ -105,7 +115,9 @@
                             title: {
                                 display: true,
                                 text: 'Date'
-                            }
+                            },
+                            min: defaultStart,
+                            max: defaultEnd
                         },
                         y: {
                             beginAtZero: false,
@@ -136,6 +148,21 @@
                                     }
                                     return label;
                                 }
+                            }
+                        },
+                        zoom: {
+                            zoom: {
+                                wheel: {
+                                    enabled: true,
+                                },
+                                pinch: {
+                                    enabled: true
+                                },
+                                mode: 'x',
+                            },
+                            pan: {
+                                enabled: true,
+                                mode: 'x',
                             }
                         }
                     }
@@ -201,6 +228,12 @@
             };
             return colors[chainId] || '#000000';
         }
+    </script>
+    <button id="resetZoom">Reset Zoom</button>
+    <script>
+        document.getElementById('resetZoom').addEventListener('click', () => {
+            chart.resetZoom();
+        });
     </script>
 </body>
 </html>
