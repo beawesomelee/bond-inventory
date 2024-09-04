@@ -130,12 +130,14 @@ def initialize():
 
 @app.route('/')
 def index():
+    logger.info("Rendering index.html")
     return render_template('index.html')
 
 @app.route('/data')
 @cache.cached(timeout=3600)  # Cache for 1 hour
 def get_data():
     global data_cache
+    logger.info("Data requested")
     try:
         if not data_cache:
             data_cache = load_data()
@@ -160,6 +162,7 @@ def get_data():
         # Calculate percentages for pie chart
         pie_data = {chain: (value['value'] / total) * 100 for chain, value in latest_data.items()}
         
+        logger.info(f"Returning data: {json.dumps(latest_data)[:100]}...")  # Log first 100 chars of data
         return jsonify({
             'latest': latest_data,
             'pie_data': pie_data,
