@@ -3,326 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Bonds Inventory Dashboard</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <title>Bond Inventory Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 20px;
-            color: #333333;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 30px;
-        }
-        h1, h2 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 30px;
-        }
-        #chart {
-            width: 100%;
-            height: 600px;
-            margin-bottom: 40px;
-        }
-        table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            margin-top: 30px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        th, td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-        tr:last-child td {
-            border-bottom: none;
-        }
-        tr:hover {
-            background-color: #f8f9fa;
-            transition: background-color 0.3s ease;
-        }
-        .loading {
-            text-align: center;
-            font-size: 18px;
-            margin-top: 20px;
-            color: #2c3e50;
-        }
-        .btn {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        .btn:hover {
-            background-color: #2980b9;
-        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        #chart-container { display: flex; justify-content: space-between; }
+        #lineChart { width: 70%; }
+        #pieChart { width: 25%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Daily Bonds Inventory Dashboard</h1>
-        <div id="chart"></div>
-        <h2>Latest Daily Inventory</h2>
-        <div id="table"></div>
-        <div id="debug"></div>
+    <h1>Bond Inventory Dashboard</h1>
+    <div id="chart-container">
+        <canvas id="lineChart"></canvas>
+        <canvas id="pieChart"></canvas>
     </div>
+    <h2>Latest Inventory</h2>
+    <table id="inventoryTable">
+        <thead>
+            <tr>
+                <th>Chain</th>
+                <th>Value</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
     <script>
-        const chainNames = {
-            '1': 'Ethereum Mainnet',
-            '56': 'Binance Smart Chain',
-            '137': 'Polygon',
-            '8453': 'Base',
-            '42161': 'Arbitrum One',
-            '59144': 'Linea'
-        };
+        let lineChart, pieChart;
 
-        function getChainName(chainId) {
-            return chainNames[chainId] || `Chain ${chainId}`;
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
         }
 
-        function formatValue(value) {
-            const absValue = Math.abs(value);
-            if (absValue >= 1e9) {
-                return (value / 1e9).toFixed(2) + 'B';
-            } else if (absValue >= 1e6) {
-                return (value / 1e6).toFixed(2) + 'M';
-            } else if (absValue >= 1e3) {
-                return (value / 1e3).toFixed(2) + 'K';
+        function updateDashboard() {
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    updateLineChart(data.historical);
+                    updatePieChart(data.pie_data);
+                    updateInventoryTable(data.latest);
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function updateLineChart(data) {
+            const datasets = Object.entries(data).map(([chain, values]) => ({
+                label: chain,
+                data: Object.entries(values).map(([date, value]) => ({ x: date, y: value })),
+                fill: false
+            }));
+
+            if (lineChart) {
+                lineChart.data.datasets = datasets;
+                lineChart.update();
             } else {
-                return value.toFixed(2);
-            }
-        }
-
-        function createDataTable(data) {
-            const table = document.createElement('table');
-            const thead = document.createElement('thead');
-            const tbody = document.createElement('tbody');
-
-            // Create header
-            const headerRow = document.createElement('tr');
-            ['Blockchain Network', 'Daily Inventory', 'Date'].forEach(text => {
-                const th = document.createElement('th');
-                th.textContent = text;
-                headerRow.appendChild(th);
-            });
-            thead.appendChild(headerRow);
-            table.appendChild(thead);
-
-            // Create rows and sort by latest value
-            const rows = [];
-            for (const [chainId, chainData] of Object.entries(data)) {
-                if (chainId !== 'aggregate') {
-                    const latestTimestamp = Object.keys(chainData).sort().pop();
-                    const latestValue = parseFloat(chainData[latestTimestamp]);
-                    rows.push({
-                        chainId,
-                        latestValue,
-                        latestTimestamp
-                    });
-                }
-            }
-
-            // Sort rows by latest value in descending order
-            rows.sort((a, b) => b.latestValue - a.latestValue);
-
-            // Create table rows
-            for (const row of rows) {
-                const tr = document.createElement('tr');
-                const networkName = document.createElement('td');
-                const latestValue = document.createElement('td');
-                const timestamp = document.createElement('td');
-
-                networkName.textContent = getChainName(row.chainId);
-                latestValue.textContent = formatValue(row.latestValue);
-                timestamp.textContent = moment(row.latestTimestamp).format('YYYY-MM-DD');
-
-                tr.appendChild(networkName);
-                tr.appendChild(latestValue);
-                tr.appendChild(timestamp);
-                tbody.appendChild(tr);
-            }
-
-            // Add total row
-            const totalRow = document.createElement('tr');
-            const totalLabel = document.createElement('td');
-            const totalValue = document.createElement('td');
-            const totalDate = document.createElement('td');
-
-            totalLabel.textContent = 'Total Current Inventory';
-            totalLabel.style.fontWeight = 'bold';
-            
-            const latestAggregateTimestamp = Object.keys(data['aggregate']).sort().pop();
-            const totalInventory = data['aggregate'][latestAggregateTimestamp];
-            totalValue.textContent = formatValue(totalInventory);
-            totalValue.style.fontWeight = 'bold';
-            
-            totalDate.textContent = moment(latestAggregateTimestamp).format('YYYY-MM-DD');
-
-            totalRow.appendChild(totalLabel);
-            totalRow.appendChild(totalValue);
-            totalRow.appendChild(totalDate);
-            tbody.appendChild(totalRow);
-
-            table.appendChild(tbody);
-            return table;
-        }
-
-        function displayData(data) {
-            createChart(data);
-            createTable(data);
-        }
-
-        function createChart(data) {
-            console.log("Creating chart with data:", data);
-            const chartElement = document.getElementById('chart');
-            chartElement.innerHTML = ''; // Clear previous content
-
-            const traces = [];
-            const chainIds = Object.keys(data).filter(key => key !== 'aggregate');
-
-            const colors = [
-                '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', 
-                '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', 
-                '#bcbd22', '#17becf'
-            ];
-
-            chainIds.forEach((chainId, index) => {
-                const chainData = data[chainId];
-                
-                // Sort timestamps and get corresponding values
-                const sortedEntries = Object.entries(chainData).sort(([a], [b]) => a.localeCompare(b));
-                const x = sortedEntries.map(([timestamp, _]) => moment(timestamp).format('YYYY-MM-DD'));
-                const y = sortedEntries.map(([_, value]) => value);
-
-                traces.push({
-                    x: x,
-                    y: y,
-                    type: 'scatter',
-                    mode: 'lines+markers',
-                    name: getChainName(chainId),
-                    line: {
-                        color: colors[index % colors.length],
-                        width: 2
-                    },
-                    marker: {
-                        size: 6,
-                        color: colors[index % colors.length],
-                        line: {
-                            color: 'white',
-                            width: 1
+                const ctx = document.getElementById('lineChart').getContext('2d');
+                lineChart = new Chart(ctx, {
+                    type: 'line',
+                    data: { datasets },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: { type: 'time', time: { unit: 'day' } },
+                            y: { beginAtZero: true }
                         }
-                    },
-                    hoverinfo: 'x+y+name'
-                });
-            });
-
-            const layout = {
-                title: {
-                    text: 'Daily Bonds Inventory',
-                    font: {
-                        size: 24,
-                        color: '#2c3e50'
                     }
-                },
-                xaxis: {
-                    title: 'Date',
-                    gridcolor: '#e0e0e0',
-                    zeroline: false,
-                    tickformat: '%Y-%m-%d'
-                },
-                yaxis: {
-                    title: 'Inventory Value (USD)',
-                    gridcolor: '#e0e0e0',
-                    zeroline: false,
-                    tickformat: '$.2s'
-                },
-                height: 600,
-                margin: { l: 60, r: 30, b: 50, t: 80, pad: 4 },
-                paper_bgcolor: 'white',
-                plot_bgcolor: 'white',
-                hovermode: 'closest',
-                legend: {
-                    orientation: 'h',
-                    y: -0.15
-                },
-                font: {
-                    family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                }
-            };
-
-            const config = {
-                responsive: true,
-                displayModeBar: false
-            };
-
-            Plotly.newPlot(chartElement, traces, layout, config);
-        }
-
-        function createTable(data) {
-            const tableElement = document.getElementById('table');
-            tableElement.innerHTML = ''; // Clear previous content
-
-            const table = createDataTable(data);
-            tableElement.appendChild(table);
-        }
-
-        async function fetchAndUpdateData() {
-            const chartElement = document.getElementById('chart');
-            const tableElement = document.getElementById('table');
-            chartElement.innerHTML = '<p class="loading">Loading data... This may take a few moments.</p>';
-            tableElement.innerHTML = '';
-            try {
-                console.log("Fetching data...");
-                const response = await fetch('/data', { timeout: 30000 }); // 30 seconds timeout
-                console.log("Response received:", response.status);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                console.log("Data received:", data);
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                if (Object.keys(data).length === 0) {
-                    chartElement.innerHTML = '<p class="loading">No data available. Please try again later.</p>';
-                    return;
-                }
-                // Process and display data here
-                displayData(data);
-            } catch (error) {
-                console.error("Error fetching or processing data:", error);
-                chartElement.innerHTML = `
-                    <p class='loading'>Error: ${error.message}</p>
-                    <p>If this persists, the server may be experiencing high load. Please try again in a few minutes.</p>
-                `;
+                });
             }
         }
 
-        // Call fetchAndUpdateData immediately when the script loads
-        fetchAndUpdateData();
-        // Update data every 4 hours
-        setInterval(fetchAndUpdateData, 4 * 60 * 60 * 1000);
+        function updatePieChart(data) {
+            const labels = Object.keys(data);
+            const values = Object.values(data);
+
+            if (pieChart) {
+                pieChart.data.labels = labels;
+                pieChart.data.datasets[0].data = values;
+                pieChart.update();
+            } else {
+                const ctx = document.getElementById('pieChart').getContext('2d');
+                pieChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: [
+                                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        title: {
+                            display: true,
+                            text: 'Distribution by Chain'
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateInventoryTable(data) {
+            const tableBody = document.querySelector('#inventoryTable tbody');
+            tableBody.innerHTML = '';
+            Object.entries(data).forEach(([chain, info]) => {
+                const row = tableBody.insertRow();
+                row.insertCell(0).textContent = chain;
+                row.insertCell(1).textContent = info.value.toFixed(2);
+                row.insertCell(2).textContent = formatDate(info.date);
+            });
+        }
+
+        updateDashboard();
+        setInterval(updateDashboard, 300000); // Update every 5 minutes
     </script>
 </body>
 </html>

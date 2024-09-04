@@ -87,21 +87,17 @@ def fetch_data():
             return
         logger.info(f"Received data: {raw_data[:100]}...")  # Log first 100 characters of raw data
         
-        timestamp = datetime.now().isoformat()
+        timestamp = datetime.now().strftime('%Y-%m-%d')
         for chain in raw_data:
             chainId = str(chain['chainId'])
-            totalRemainingValue = chain.get('totalRemainingValue')
-            if totalRemainingValue is not None:
-                totalRemainingValue = float(totalRemainingValue)
-            else:
-                totalRemainingValue = 0.0
+            totalRemainingValue = float(chain.get('totalRemainingValue', 0))
             if chainId not in data_cache:
                 data_cache[chainId] = {}
-            # Add new data point without overwriting existing ones
+            # Update or add new data point for the day
             data_cache[chainId][timestamp] = totalRemainingValue
         
         # Calculate and store aggregate
-        aggregate_value = sum(float(chain.get('totalRemainingValue', 0)) for chain in raw_data if chain.get('totalRemainingValue') is not None)
+        aggregate_value = sum(float(chain.get('totalRemainingValue', 0)) for chain in raw_data)
         if 'aggregate' not in data_cache:
             data_cache['aggregate'] = {}
         data_cache['aggregate'][timestamp] = aggregate_value
@@ -142,16 +138,33 @@ def get_data():
     global data_cache
     try:
         if not data_cache:
-            logger.info("Data cache is empty, loading from file")
             data_cache = load_data()
         if not data_cache:
-            logger.info("No data in file, fetching new data")
             fetch_data()
         if not data_cache:
-            logger.warning("No data available after fetch attempt")
             return jsonify({"error": "No data available"}), 404
-        logger.info(f"Returning data: {data_cache}")
-        return jsonify(data_cache)
+        
+        # Get the latest data for each chain
+        latest_data = {}
+        for chain, data in data_cache.items():
+            if chain != 'aggregate':
+                latest_date = max(data.keys())
+                latest_data[chain] = {
+                    'value': data[latest_date],
+                    'date': latest_date
+                }
+        
+        # Calculate total for pie chart
+        total = sum(item['value'] for item in latest_data.values())
+        
+        # Calculate percentages for pie chart
+        pie_data = {chain: (value['value'] / total) * 100 for chain, value in latest_data.items()}
+        
+        return jsonify({
+            'latest': latest_data,
+            'pie_data': pie_data,
+            'historical': data_cache
+        })
     except Exception as e:
         logger.error(f"Error in get_data route: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
